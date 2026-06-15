@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>健康管理記録</title>
+<style>
+  :root{
+    --paper:#F6F7F4; --surface:#FFFFFF; --ink:#1B2A28; --ink-soft:#5C6B68;
+    --line:#E4E8E3; --line-strong:#D2D8D0;
+    --teal:#0E8C7F; --teal-deep:#0A6B61; --teal-wash:#EAF4F1;
+    --ok:#2E9E6B; --ok-wash:#E9F6EF;
+    --high:#D2553F; --high-wash:#FBEDE9;
+    --low:#3B7CC4; --low-wash:#EAF1FA;
+    --na:#9AA6A2;
+    --radius:14px; --shadow:0 1px 2px rgba(27,42,40,.05),0 8px 24px -16px rgba(27,42,40,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Yu Gothic",Meiryo,system-ui,sans-serif;
+    font-size:15px; line-height:1.6; -webkit-text-size-adjust:100%;
+  }
+  .num{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+  header.top{
+    position:sticky;top:0;z-index:30;background:rgba(246,247,244,.86);backdrop-filter:saturate(1.4) blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .top-in{max-width:980px;margin:0 auto;padding:14px 18px 0}
+  .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .brand h1{font-size:19px;margin:0;letter-spacing:.04em;font-weight:700}
+  .brand .pulse{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 0 rgba(14,140,127,.5);animation:p 2.4s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(14,140,127,.45)}70%{box-shadow:0 0 0 9px rgba(14,140,127,0)}100%{box-shadow:0 0 0 0 rgba(14,140,127,0)}}
+  .brand .sub{color:var(--ink-soft);font-size:12.5px;letter-spacing:.02em}
+  nav.tabs{display:flex;gap:2px;max-width:980px;margin:10px auto 0;padding:0 12px;overflow-x:auto}
+  nav.tabs button{
+    appearance:none;border:0;background:transparent;color:var(--ink-soft);font:inherit;font-size:14px;
+    padding:10px 14px 12px;cursor:pointer;position:relative;white-space:nowrap;border-radius:8px 8px 0 0;
+  }
+  nav.tabs button .ic{margin-right:6px;font-size:13px}
+  nav.tabs button[aria-selected="true"]{color:var(--teal-deep);font-weight:700}
+  nav.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:2.5px;background:var(--teal);border-radius:3px}
+  nav.tabs button:hover{color:var(--ink)}
+  main{max-width:980px;margin:0 auto;padding:20px 18px 80px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:18px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  label.fld{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-soft);font-weight:600;flex:1;min-width:140px}
+  input,select,textarea{
+    font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:9px;padding:9px 11px;
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+  .btn{appearance:none;border:1px solid var(--teal);background:var(--teal);color:#fff;font:inherit;font-weight:700;font-size:14px;
+    padding:10px 18px;border-radius:10px;cursor:pointer;transition:filter .15s,transform .05s}
+  .btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:transparent;color:var(--teal-deep)}
+  .btn.soft{background:var(--teal-wash);color:var(--teal-deep);border-color:transparent}
+  .btn.danger{background:transparent;border-color:var(--high);color:var(--high)}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:8px}
+
+  .sec-title{display:flex;align-items:center;gap:10px;margin:26px 2px 10px}
+  .sec-title h2{font-size:14px;margin:0;letter-spacing:.06em;color:var(--teal-deep);font-weight:800}
+  .sec-title .ln{flex:1;height:1px;background:var(--line)}
+  .sec-title .cnt{font-size:11.5px;color:var(--na)}
+
+  .items{display:grid;grid-template-columns:1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+  .item{display:grid;grid-template-columns:1fr 96px 120px 44px;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--line)}
+  .item:first-child{border-top:0}
+  .item .lab{font-size:14px}
+  .item .ref{font-size:11.5px;color:var(--na);text-align:right;white-space:nowrap}
+  .item input{width:100%;text-align:right;padding:7px 9px}
+  .item .judge{text-align:center}
+  .badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:26px;padding:0 8px;border-radius:7px;font-weight:800;font-size:13px}
+  .b-ok{background:var(--ok-wash);color:var(--ok)} .b-high{background:var(--high-wash);color:var(--high)}
+  .b-low{background:var(--low-wash);color:var(--low)} .b-na{color:var(--na)}
+  @media(max-width:640px){
+    .item{grid-template-columns:1fr 84px 40px;grid-template-areas:"lab lab lab" "ref val jdg";row-gap:4px;padding:11px 13px}
+    .item .lab{grid-area:lab;font-weight:600} .item .ref{grid-area:ref;text-align:left}
+    .item .inp{grid-area:val} .item .judge{grid-area:jdg}
+  }
+
+  .savebar{position:sticky;bottom:0;z-index:20;margin-top:18px;display:flex;gap:10px;align-items:center;
+    background:linear-gradient(180deg,rgba(246,247,244,0),var(--paper) 38%);padding:16px 2px 4px;flex-wrap:wrap}
+  .savebar .spacer{flex:1}
+  .hint{color:var(--ink-soft);font-size:12.5px}
+
+  /* history table */
+  .tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap;text-align:right}
+  th:last-child,td:last-child{border-right:0}
+  thead th{position:sticky;top:0;background:var(--teal-wash);color:var(--teal-deep);z-index:2;font-weight:700;text-align:center}
+  .stick{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;font-weight:600;min-width:150px;box-shadow:1px 0 0 var(--line)}
+  thead .stick{z-index:3;background:var(--teal-wash)}
+  tr.catrow td{background:#FBFCFA;color:var(--teal-deep);font-weight:800;font-size:11.5px;letter-spacing:.05em;text-align:left;position:sticky;left:0}
+  td.v-high{color:var(--high);font-weight:700} td.v-low{color:var(--low);font-weight:700} td.v-ok{color:var(--ink)}
+  td .mk{font-size:10px;margin-left:3px;opacity:.8}
+
+  /* trends */
+  .chart-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  canvas{width:100%;max-width:100%;display:block}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-top:8px}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+
+  .empty{color:var(--ink-soft);text-align:center;padding:48px 20px}
+  .empty .big{font-size:34px;margin-bottom:8px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--ink);color:#fff;padding:11px 20px;border-radius:24px;font-size:13.5px;z-index:50;transition:.25s;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .reclist{display:flex;flex-direction:column;gap:8px}
+  .recitem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+  .recitem .d{font-weight:700} .recitem .f{color:var(--ink-soft);font-size:12.5px}
+  .recitem .sp{flex:1}
+  .pill{font-size:11px;background:var(--teal-wash);color:var(--teal-deep);padding:2px 9px;border-radius:20px;font-weight:700}
+  .data-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){.data-actions{grid-template-columns:1fr}}
+  .fileinput{display:none}
+  small.note{display:block;color:var(--ink-soft);margin-top:6px;font-size:11.5px;line-height:1.5}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="pulse" aria-hidden="true"></span>
+      <h1>健康管理記録</h1>
+      <span class="sub">検査値の記録・基準判定・推移をひとつに</span>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="input" aria-selected="true"><span class="ic">✎</span>記録する</button>
+    <button role="tab" data-tab="history" aria-selected="false"><span class="ic">▦</span>一覧</button>
+    <button role="tab" data-tab="trend" aria-selected="false"><span class="ic">📈</span>推移</button>
+    <button role="tab" data-tab="data" aria-selected="false"><span class="ic">⤓</span>データ</button>
+  </nav>
+</header>
+<main id="main"></main>
+<div class="toast" id="toast"></div>
+<div id="overlay" style="position:fixed;inset:0;z-index:60;background:var(--paper);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <div style="width:34px;height:34px;border:3px solid var(--line-strong);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div id="overlay-msg" style="color:var(--ink-soft);font-size:13.5px">読み込んでいます…</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<script>
+const SEED={"items": [{"id": "i3", "cat": "身体測定", "label": "体重", "ref": ""}, {"id": "i4", "cat": "視力検査", "label": "視力 裸眼 右", "ref": ""}, {"id": "i5", "cat": "視力検査", "label": "左", "ref": ""}, {"id": "i6", "cat": "視力検査", "label": "眼底", "ref": ""}, {"id": "i8", "cat": "血圧  (mmHg)", "label": "最高血圧", "ref": "130 未満"}, {"id": "i9", "cat": "血圧  (mmHg)", "label": "最低血圧", "ref": "80 未満"}, {"id": "i10", "cat": "脂質", "label": "総コレステロール", "ref": "140-219"}, {"id": "i11", "cat": "脂質", "label": "中性脂肪", "ref": "30-149"}, {"id": "i12", "cat": "脂質", "label": "HDLコレステロール (mg／dl)", "ref": "40-96"}, {"id": "i13", "cat": "脂質", "label": "LDLコレステロール (mg／dl)", "ref": "65-139"}, {"id": "i14", "cat": "脂質", "label": "non-HDLコレステロール", "ref": "150 未満"}, {"id": "i15", "cat": "肝機能検査", "label": "AST(GOT) (mg／dl)", "ref": "30 以下"}, {"id": "i16", "cat": "肝機能検査", "label": "ALT(GPT)", "ref": "30 以下"}, {"id": "i17", "cat": "肝機能検査", "label": "r-GPT", "ref": "50 以下"}, {"id": "i18", "cat": "肝機能検査", "label": "ALP", "ref": "38-113"}, {"id": "i19", "cat": "肝機能検査", "label": "LDH", "ref": "124-222"}, {"id": "i20", "cat": "肝機能検査", "label": "総蛋白", "ref": "6.5-8.0"}, {"id": "i21", "cat": "肝機能検査", "label": "アルブミン", "ref": "4.0～5.0"}, {"id": "i22", "cat": "肝機能検査", "label": "A/G比", "ref": "1.00～2.14"}, {"id": "i23", "cat": "肝機能検査", "label": "総ビリルビン", "ref": "1.2"}, {"id": "i24", "cat": "糖代謝", "label": "空腹時血糖", "ref": "69～109"}, {"id": "i25", "cat": "糖代謝", "label": "随時血糖", "ref": "109"}, {"id": "i26", "cat": "糖代謝", "label": "HbA1c", "ref": "6.2"}, {"id": "i_avg", "cat": "糖代謝", "label": "平均血糖値（推定）", "ref": "132 未満"}, {"id": "i27", "cat": "糖代謝", "label": "グリコアルプミン", "ref": "12.3～165"}, {"id": "i28", "cat": "糖代謝", "label": "尿糖", "ref": "(-)"}, {"id": "i29", "cat": "尿一般", "label": "尿蛋白", "ref": "(-)"}, {"id": "i30", "cat": "尿一般", "label": "尿混血", "ref": "(-)"}, {"id": "i31", "cat": "尿一般", "label": "ウロビリノーゲン", "ref": ""}, {"id": "i32", "cat": "尿一般", "label": "尿沈 赤血球", "ref": "0-1"}, {"id": "i33", "cat": "尿一般", "label": "白血球", "ref": "0-1"}, {"id": "i34", "cat": "尿一般", "label": "篇平上皮", "ref": "0-1"}, {"id": "i35", "cat": "尿一般", "label": "移行上皮", "ref": "0-1"}, {"id": "i36", "cat": "尿一般", "label": "細菌", "ref": "0-1"}, {"id": "i37", "cat": "腎機能", "label": "クレアチニン", "ref": "1.0 以下"}, {"id": "i38", "cat": "腎機能", "label": "e-GFR", "ref": "60以上"}, {"id": "i39", "cat": "腎機能", "label": "尿素窒素", "ref": "8.0～22"}, {"id": "i40", "cat": "尿酸", "label": "尿酸", "ref": "2.1-7.0"}, {"id": "i41", "cat": "膵臓", "label": "血清アミラーゼ", "ref": "130 未満"}, {"id": "i42", "cat": "血液一般", "label": "赤血球", "ref": "M427-570"}, {"id": "i43", "cat": "血液一般", "label": "Hb", "ref": "13.1-17.6"}, {"id": "i44", "cat": "血液一般", "label": "Ht", "ref": "38.5-51.6"}, {"id": "i45", "cat": "血液一般", "label": "赤血球指数 MCV", "ref": ""}, {"id": "i46", "cat": "血液一般", "label": "MCH", "ref": ""}, {"id": "i47", "cat": "血液一般", "label": "MCHC", "ref": ""}, {"id": "i48", "cat": "血液一般", "label": "白血球数", "ref": "3500～9800"}, {"id": "i49", "cat": "血液一般", "label": "血小板数", "ref": "13.0～36.9"}, {"id": "i50", "cat": "血液一般", "label": "血液像 好塩基球", "ref": "0-1%"}, {"id": "i51", "cat": "血液一般", "label": "好酸球", "ref": "0-5%"}, {"id": "i52", "cat": "血液一般", "label": "好中球 分葉核球", "ref": "40-63%"}, {"id": "i53", "cat": "血液一般", "label": "状核球", "ref": "2-7%"}, {"id": "i54", "cat": "血液一般", "label": "リンパ球", "ref": "22-46%"}, {"id": "i55", "cat": "血液一般", "label": "単球", "ref": "3-11%"}, {"id": "i56", "cat": "心電図", "label": "心電図", "ref": "正常洞調律"}, {"id": "i58", "cat": "胸部", "label": "胸部", "ref": ""}, {"id": "i60", "cat": "肺機能", "label": "肺活量", "ref": "1"}, {"id": "i61", "cat": "肺機能", "label": "%肺活量", "ref": "80"}, {"id": "i62", "cat": "肺機能", "label": "一秒量", "ref": "1"}, {"id": "i63", "cat": "肺機能", "label": "一秒率", "ref": "70"}, {"id": "i64", "cat": "肺機能", "label": "努力性肺活量", "ref": ""}, {"id": "i65", "cat": "胃部検査", "label": "胃透視", "ref": ""}, {"id": "i69", "cat": "胃部検査", "label": "ピロリ菌lgG抗体", "ref": ""}, {"id": "i70", "cat": "便混血反応", "label": "1日目", "ref": "(-)"}, {"id": "i71", "cat": "便混血反応", "label": "2日目", "ref": "(-)"}, {"id": "i72", "cat": "腹部超音波(エコー)", "label": "腹部超音波(エコー)", "ref": ""}, {"id": "i77", "cat": "肝炎", "label": "HBs抗原", "ref": ""}, {"id": "i78", "cat": "肝炎", "label": "HBs抗体", "ref": ""}, {"id": "i79", "cat": "肝炎", "label": "HCV抗体", "ref": ""}, {"id": "i80", "cat": "腫瘍マーカー", "label": "PSA  前立腺", "ref": "4.000以下"}, {"id": "i81", "cat": "腫瘍マーカー", "label": "CEA", "ref": ""}, {"id": "i82", "cat": "腫瘍マーカー", "label": "CA19-9", "ref": ""}, {"id": "i83", "cat": "腫瘍マーカー", "label": "CA125", "ref": ""}, {"id": "i84", "cat": "腫瘍マーカー", "label": "AFP", "ref": ""}, {"id": "i85", "cat": "腫瘍マーカー", "label": "PIVKA-Ⅱ", "ref": ""}, {"id": "i86", "cat": "腫瘍マーカー", "label": "SCC", "ref": ""}, {"id": "i87", "cat": "腫瘍マーカー", "label": "NSE", "ref": ""}, {"id": "i88", "cat": "腫瘍マーカー", "label": "NCC", "ref": ""}, {"id": "i89", "cat": "腫瘍マーカー", "label": "CA15-3", "ref": ""}], "records": [{"id": "r1", "title": "健康診断1回目", "date": "2024-03-25", "facility": "健康診断", "values": {"i3": 67, "i4": 0.9, "i5": 0.7, "i8": 152, "i9": 101, "i10": 232, "i11": 221, "i12": 45, "i13": 163, "i14": 187, "i15": 31, "i16": 44, "i17": 36, "i18": 82, "i19": 173, "i20": 7.2, "i21": 4.6, "i23": 1.7, "i24": 220, "i28": "(-)", "i29": "(-)", "i30": "(-)", "i32": "0-1", "i33": "0-1", "i34": "0-1", "i35": "0-1", "i36": "0-1", "i37": 0.93, "i38": 68.3, "i40": 4.9, "i41": 58, "i42": 563, "i43": 16.9, "i44": 48.1, "i48": 9300, "i49": 26.8, "i50": 0.5, "i51": 1, "i52": 60.5, "i53": 0, "i54": 32, "i55": 6, "i56": "正常洞調律", "i58": "右中肺野結節影", "i60": 5.28, "i61": 138.2, "i62": 3.73, "i63": 78.8, "i64": 4.73, "i65": "慢性胃炎疑い", "i70": "(-)", "i71": "(-)", "i72": "脂肪肝"}}, {"id": "r2", "title": "2回目", "date": "2024-07-01", "facility": "浜田内科", "values": {"i8": 134, "i9": 90, "i10": 201, "i11": 234, "i12": 40, "i13": 114, "i15": 20, "i16": 24, "i17": 25, "i18": 75, "i19": 154, "i20": 7, "i21": 4.5, "i22": 1.8, "i23": 0.9, "i24": 145, "i26": 7.8, "i37": 0.83, "i38": 77.4, "i39": 7.4, "i40": 4.3, "i41": 65, "i42": 543, "i43": 16.3, "i44": 48.3, "i45": 89, "i46": 30, "i47": 33.7, "i48": 7700, "i49": 27, "i58": "所見なし", "i80": 1.51, "i_avg": 177}}, {"id": "r3", "title": "3回目", "date": "2024-07-22", "facility": "血液採取", "values": {"i3": 63, "i4": 1.2, "i5": 1, "i6": "所見なし", "i8": "ー", "i9": "ー", "i24": 134}}, {"id": "r4", "title": "4回目", "date": "2024-07-29", "facility": "治療前 / 3回目の結果", "values": {"i3": 62.5, "i8": 134, "i9": 89, "i10": 200, "i11": 109, "i12": 46, "i13": 126, "i15": 22, "i16": 23, "i17": 22, "i18": 70, "i19": 210, "i20": 7.6, "i21": 4.9, "i22": 1.81, "i23": 1.1, "i26": 7.3, "i27": 20, "i37": 0.82, "i38": 78.4, "i39": 8.6, "i40": 4.9, "i41": 62, "i42": 535, "i43": 16.4, "i44": 48.3, "i45": 90.3, "i46": 30.7, "i47": 34, "i48": 6700, "i49": 29.7, "i77": "陰性", "i79": 0.1, "i_avg": 163}}, {"id": "r5", "title": "5回目", "date": "2024-08-05", "facility": "", "values": {"i3": 62.1, "i8": 128, "i9": 89, "i24": 98}}, {"id": "r6", "title": "6回目", "date": "2024-08-09", "facility": "血液採取 / メールにて結果", "values": {"i3": 62, "i4": 1.2, "i5": 1.2, "i6": "所見なし", "i8": 117, "i9": 87, "i10": 174, "i11": 65, "i12": 50, "i13": 104, "i15": 27, "i16": 37, "i17": 24, "i18": 79, "i19": 167, "i20": 7.7, "i21": 5, "i22": 1.85, "i23": 0.6, "i24": 87, "i26": 6.5, "i27": 15.2, "i37": 0.86, "i38": 74.4, "i39": 9.4, "i40": 3.7, "i41": 72, "i42": 558, "i43": 16.9, "i44": 51.3, "i45": 91.9, "i46": 30.3, "i47": 32.9, "i48": 8700, "i49": 33.2, "i_avg": 140}}, {"id": "r7", "title": "7回目", "date": "", "facility": "太田脳神経外科", "values": {"i8": 140, "i9": 85}}, {"id": "r8", "title": "8回目", "date": "", "facility": "小田辺内科", "values": {"i3": 60.2, "i8": 128, "i9": 84, "i24": 88, "i25": 103, "i26": 5.8, "i_avg": 120}}, {"id": "r9", "title": "9回目", "date": "", "facility": "小田辺内科 / 10/15採血 / 食後1時間", "values": {"i3": 60.9, "i8": 109, "i9": 68, "i10": 171, "i11": 168, "i12": 45, "i13": 98, "i15": 17, "i16": 14, "i17": 15, "i18": 84, "i19": 157, "i20": 7.2, "i21": 4.7, "i22": 1.88, "i23": 0.4, "i24": 105, "i26": 5.2, "i27": 12.7, "i29": "(-)", "i30": "(-)", "i37": 0.89, "i38": 71.7, "i39": 12.7, "i40": 4, "i41": 91, "i42": 554, "i43": 16.9, "i44": 52.1, "i45": 94, "i46": 30.5, "i47": 32.4, "i48": 7700, "i49": 31, "i_avg": 103}}, {"id": "r10", "title": "10回目", "date": "", "facility": "小田辺内科 / 11/11採血 / 食後1時間", "values": {"i3": 60.9, "i10": 173, "i11": 192, "i12": 44, "i13": 101, "i15": 13, "i16": 11, "i17": 12, "i18": 75, "i19": 141, "i20": 6.8, "i21": 4.5, "i22": 0.96, "i23": 0.3, "i24": 94, "i26": 5.3, "i27": 12.5, "i37": 0.94, "i38": 67.5, "i39": 13.4, "i40": 4, "i41": 89, "i42": 557, "i43": 16.8, "i44": 52.6, "i45": 94.4, "i46": 30.2, "i47": 31.9, "i48": 8100, "i49": 10, "i_avg": 105}}, {"id": "r11", "title": "11回目", "date": "", "facility": "小田辺内科 / 1/20採血 / 食後1.5時間", "values": {"i3": 60.2, "i8": 118, "i9": 79, "i10": 169, "i11": 166, "i12": 47, "i13": 93, "i15": 18, "i16": 22, "i17": 14, "i18": 78, "i19": 141, "i20": 6.8, "i21": 4.6, "i22": 2.09, "i23": 0.3, "i24": 111, "i26": 5.3, "i27": 13.2, "i29": "(-)", "i30": "(-)", "i37": 0.99, "i38": 63.5, "i39": 17.1, "i40": 4, "i41": 89, "i42": 534, "i43": 15.9, "i44": 49.1, "i45": 91.9, "i46": 29.8, "i47": 32.4, "i48": 7600, "i49": 27.5, "i_avg": 105}}, {"id": "r12", "title": "12回目", "date": "", "facility": "健康診断 / 3/5", "values": {"i3": 57.7, "i4": 1.5, "i5": 1.5, "i8": 120, "i9": 88, "i10": 168, "i11": 84, "i12": 58, "i13": 101, "i14": 110, "i15": 15, "i16": 19, "i17": 14, "i18": 62, "i24": 101, "i29": "(-)", "i30": "(-)", "i37": 1, "i38": 62.8, "i40": 3.6, "i42": 549, "i43": 16.5, "i44": 51.7, "i48": 7100, "i56": "正常洞調律", "i58": "所見なし", "i70": "(-)", "i71": "(-)", "i72": "肝嚢胞"}}, {"id": "r13", "title": "13回目", "date": "", "facility": "健康診断 / 小田辺内科 / 5/7採血", "values": {"i3": 58, "i8": 124, "i9": 84, "i10": 149, "i11": 149, "i12": 47, "i13": 79, "i15": 15, "i16": 16, "i17": 14, "i18": 81, "i19": 149, "i20": 6.8, "i21": 4.3, "i22": 1.72, "i23": 0.4, "i24": 107, "i26": 5.3, "i27": 14.1, "i37": 0.94, "i38": 67.2, "i39": 14.7, "i40": 3.9, "i41": 87, "i42": 508, "i43": 15.6, "i44": 48.5, "i45": 95.5, "i46": 30.7, "i47": 32.2, "i48": 6400, "i49": 13, "i_avg": 105}}, {"id": "r14", "title": "14回目", "date": "", "facility": "内視鏡検査 / 内視鏡クリニック / 6/23検査・採血", "values": {"i65": "菱縮性胃炎", "i70": "直腸ポリープ切除", "i71": "憩室症"}}, {"id": "r15", "title": "15回目", "date": "", "facility": "内視鏡検査 / 内視鏡クリニック / 7/9検査結果", "values": {"i65": "陰性・問題無し", "i70": "良性"}}, {"id": "r16", "title": "16回目", "date": "", "facility": "小田辺内科 / 10/19採血 / 食後2.0時間", "values": {"i3": 61.2, "i10": 176, "i11": 215, "i12": 50, "i13": 98, "i15": 17, "i16": 16, "i17": 15, "i18": 95, "i19": 181, "i20": 7.1, "i21": 4.4, "i22": 1.63, "i23": 0.4, "i24": 110, "i26": 5.3, "i27": 13.7, "i29": "(-)", "i30": "(-)", "i37": 0.95, "i38": 66.4, "i39": 15.7, "i40": 4.4, "i41": 87, "i42": 547, "i43": 16.4, "i44": 52.2, "i45": 95.4, "i46": 30, "i47": 31.4, "i48": 7000, "i49": 14, "i_avg": 105}}, {"id": "r17", "title": "17回目", "date": "", "facility": "健康診断 / 3/5", "values": {"i3": 61.8, "i4": 1.2, "i5": 1.5, "i6": "A", "i8": 135, "i9": 89, "i10": 166, "i11": 103, "i12": 53, "i13": 99, "i14": 113, "i15": 18, "i16": 11, "i17": 12, "i18": 61, "i24": 89, "i29": "(-)", "i30": "(-)", "i37": 0.88, "i38": 71.8, "i40": 4.3, "i42": 531, "i43": 15.7, "i44": 48.9, "i48": 6300, "i56": "正常洞調律", "i58": "所見なし", "i70": "(-)", "i72": "肝嚢胞"}}, {"id": "r18", "title": "18回目", "date": "", "facility": "健康診断 / 6/15", "values": {"i3": 62.3, "i24": 135, "i29": "(-)", "i30": "(-)"}}]};
+</script>
+<script>
+/* ---------- storage ---------- */
+/* ---------- config ---------- */
+const LIFF_ID='2010396522-qO2lEBFM';
+const GAS_URL='https://script.google.com/macros/s/AKfycbzI0lcfD8Btx95_jPKEbGGKDv6dVEJVgx-8DQg9RELm2Z9k2GO0cuDSlbTdSNAaQd_O_g/exec';
+const API_TOKEN='';                     // GASでスクリプトプロパティ API_TOKEN を設定した場合のみ記入
+const LS_CACHE='kenko_cache_v1';        // 表示用キャッシュ（オフライン時のフォールバック）
+const ORIGINAL_RECORDS=SEED.records;    // 取り込み済みの18回分（サーバー移行用）
+let ITEMS=SEED.items;
+let records=[];
+let editingId=null;
+
+/* ---------- backend (LIFF + GAS API / ローカル) ---------- */
+const Backend={
+  mode:'local', userId:'local', name:'',
+  async init(){
+    // LIFFログインでユーザーIDを取得（LINE内なら自動）。固まらないよう保険のタイムアウト付き
+    if(window.liff){
+      try{
+        await Promise.race([
+          liff.init({liffId:LIFF_ID}),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('liff timeout')),8000))
+        ]);
+        if(!liff.isLoggedIn() && !liff.isInClient()){ liff.login(); return false; }
+        const p=await liff.getProfile();
+        this.userId=p.userId; this.name=p.displayName||'';
+      }catch(e){ console.warn('liff init failed',e); }
+    }
+    // GAS URLが設定済みならクラウド連携
+    this.mode=(GAS_URL.indexOf('/exec')>=0 && GAS_URL.indexOf('ここに')<0)?'remote':'local';
+    return true;
+  },
+  async gasGet(params){
+    // GASはPOSTだと302リダイレクトでCORSエラーになるため、全操作をGETで送る
+    const qs=Object.entries(Object.assign({token:API_TOKEN},params))
+      .map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&');
+    const res=await fetch(GAS_URL+'?'+qs,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  },
+  async load(){
+    if(this.mode==='remote'){
+      const j=await this.gasGet({action:'load',userId:this.userId});
+      const recs=(j&&j.records)?j.records:[];
+      try{localStorage.setItem(LS_CACHE,JSON.stringify(recs));}catch(e){}
+      return recs;
+    }
+    try{const raw=localStorage.getItem(LS_CACHE);if(raw)return JSON.parse(raw);}catch(e){}
+    const seed=JSON.parse(JSON.stringify(ORIGINAL_RECORDS));
+    try{localStorage.setItem(LS_CACHE,JSON.stringify(seed));}catch(e){}
+    return seed;
+  },
+  async save(record){
+    if(this.mode==='remote'){ await this.gasGet({action:'save',userId:this.userId,record:record}); }
+    this.cache();
+  },
+  async remove(id){
+    if(this.mode==='remote'){ await this.gasGet({action:'delete',userId:this.userId,recordId:id}); }
+    this.cache();
+  },
+  async migrate(recs){
+    if(this.mode!=='remote') return {saved:0};
+    // 1件ずつ送って確実に保存（URLサイズ制限を避ける）
+    var saved=0;
+    for(var i=0;i<recs.length;i++){
+      try{ await this.gasGet({action:'save',userId:this.userId,record:recs[i]}); saved++; }catch(e){ console.warn('migrate item failed',i,e); }
+    }
+    return {ok:true,saved:saved};
+  },
+  cache(){ try{localStorage.setItem(LS_CACHE,JSON.stringify(records));}catch(e){} }
+};
+function isReadOnly(r){ return r && r.source==='bot'; }
+
+/* ---------- judgment ---------- */
+function refBounds(ref){
+  if(!ref)return null;
+  let r=ref.replace(/\s/g,'').replace(/，/g,',');
+  // strip leading letters like M (male)
+  // negative-expected markers
+  if(/^\(-\)/.test(ref)||ref==='(-)') return {neg:true};
+  let mUnder=r.match(/([\d.]+)未満/); if(mUnder)return{max:+mUnder[1],inc:false};
+  let mLe=r.match(/([\d.]+)以下/); if(mLe)return{max:+mLe[1],inc:true};
+  let mGe=r.match(/([\d.]+)以上/); if(mGe)return{min:+mGe[1],minInc:true};
+  let mRange=r.match(/^[A-Za-z]?\s*([\d.]+)\s*[\-~～]\s*([\d.]+)/);
+  if(mRange)return{min:+mRange[1],max:+mRange[2],inc:true};
+  let mNum=r.match(/^([\d.]+)$/);
+  if(mNum)return{max:+mNum[1],inc:true,target:true}; // single number -> upper target
+  return null;
+}
+function judge(item,val){
+  if(val===''||val==null) return 'empty';
+  const b=refBounds(item.ref);
+  if(!b) return 'na';
+  if(b.neg){
+    const s=String(val).replace(/\s/g,'');
+    return /\(-\)|^-$|陰性|なし|所見なし|正常/.test(s)?'ok':'high';
+  }
+  const n=parseFloat(String(val).replace(/[^\d.\-]/g,''));
+  if(isNaN(n)) return 'na';
+  if(b.min!=null && (b.minInc?n<b.min:n<=b.min)) return 'low';
+  if(b.max!=null && (b.inc?n>b.max:n>=b.max)) return 'high';
+  return 'ok';
+}
+const BADGE={ok:['〇','b-ok'],high:['↑','b-high'],low:['↓','b-low'],na:['—','b-na'],empty:['','b-na']};
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const cats=()=>{const o=[];ITEMS.forEach(i=>{if(!o.includes(i.cat))o.push(i.cat)});return o;};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function fmtDate(d){if(!d)return '日付未設定';const p=d.split('-');return p.length===3?`${p[0]}年${+p[1]}月${+p[2]}日`:d;}
+function sortedRecords(){return [...records].sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));}
+
+/* ---------- views ---------- */
+let activeTab='input';
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===activeTab));
+  const m=$('#main');
+  if(activeTab==='input')m.innerHTML=viewInput();
+  else if(activeTab==='history')m.innerHTML=viewHistory();
+  else if(activeTab==='trend')m.innerHTML=viewTrend();
+  else m.innerHTML=viewData();
+  bind();
+}
+
+/* ----- INPUT ----- */
+function blankDraft(){
+  return {id:null,title:'',date:new Date().toISOString().slice(0,10),facility:'',values:{}};
+}
+let draft=blankDraft();
+function viewInput(){
+  const editing=editingId!=null;
+  let html=`<div class="card pad">
+    <div class="row">
+      <label class="fld">受診日<input type="date" id="f-date" value="${draft.date||''}"></label>
+      <label class="fld">回数・表題<input id="f-title" placeholder="例）19回目 / 健康診断" value="${esc(draft.title)}"></label>
+      <label class="fld" style="flex:2">医療機関・メモ<input id="f-fac" placeholder="例）小田辺内科 / 食後1時間" value="${esc(draft.facility)}"></label>
+    </div>
+    <small class="note">数値を入れると右側に基準判定（〇 正常 ／ ↑ 高い ／ ↓ 低い ／ — 基準なし）が自動表示されます。入れた項目だけが保存されます。</small>
+  </div>`;
+  cats().forEach(cat=>{
+    const its=ITEMS.filter(i=>i.cat===cat);
+    let filled=its.filter(i=>draft.values[i.id]!==undefined&&draft.values[i.id]!=='').length;
+    html+=`<div class="sec-title"><h2>${esc(cat)}</h2><span class="ln"></span><span class="cnt">${filled}/${its.length}</span></div>`;
+    html+='<div class="items">';
+    its.forEach(i=>{
+      const v=draft.values[i.id]??'';
+      const j=judge(i,v); const[sym,cls]=BADGE[j];
+      html+=`<div class="item" data-id="${i.id}">
+        <div class="lab">${esc(i.label)}</div>
+        <div class="ref">${i.ref?esc(i.ref):'&nbsp;'}</div>
+        <div class="inp"><input class="num val" data-id="${i.id}" inputmode="decimal" value="${esc(v)}" placeholder="—"></div>
+        <div class="judge"><span class="badge ${cls}" data-badge="${i.id}">${sym}</span></div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="savebar">
+    <button class="btn" id="save">${editing?'更新を保存':'この記録を保存'}</button>
+    ${editing?'<button class="btn ghost" id="cancel">編集をやめる</button>':''}
+    <span class="spacer" style="flex:1"></span>
+    <span class="hint" id="fillcount"></span>
+  </div>`;
+  return html;
+}
+
+/* ----- HISTORY ----- */
+function viewHistory(){
+  const recs=sortedRecords();
+  if(!recs.length)return emptyState('まだ記録がありません','「記録する」から最初の検査結果を入力しましょう。');
+  let head='<th class="stick">検査項目</th><th>基準値</th>';
+  recs.forEach(r=>head+=`<th>${esc(r.title||fmtDate(r.date))}<br><span style="font-weight:400;font-size:10px">${r.date?fmtDate(r.date):''}</span></th>`);
+  let body='';
+  let lastCat=null;
+  ITEMS.forEach(i=>{
+    if(i.cat!==lastCat){body+=`<tr class="catrow"><td colspan="${recs.length+2}">${esc(i.cat)}</td></tr>`;lastCat=i.cat;}
+    let row=`<td class="stick">${esc(i.label)}</td><td style="color:var(--na);font-size:11.5px">${esc(i.ref||'')}</td>`;
+    recs.forEach(r=>{
+      const v=r.values[i.id];
+      if(v===undefined||v===''){row+='<td style="color:#cdd4ce">·</td>';return;}
+      const j=judge(i,v);
+      const mk=j==='high'?'<span class="mk" style="color:var(--high)">↑</span>':j==='low'?'<span class="mk" style="color:var(--low)">↓</span>':'';
+      const cl=j==='high'?'v-high':j==='low'?'v-low':'v-ok';
+      row+=`<td class="num ${cl}">${esc(v)}${mk}</td>`;
+    });
+    body+=`<tr>${row}</tr>`;
+  });
+  return `<div class="chart-head"><span class="hint">${recs.length}件の記録・横スクロールで全期間を比較できます</span></div>
+    <div class="tbl-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ----- TREND ----- */
+let trendItem=null;
+function numericItems(){
+  return ITEMS.filter(i=>{
+    let n=records.filter(r=>{const v=r.values[i.id];return v!==undefined&&v!==''&&!isNaN(parseFloat(String(v).replace(/[^\d.\-]/g,'')))}).length;
+    return n>=2;
+  });
+}
+function viewTrend(){
+  const opts=numericItems();
+  if(!opts.length)return emptyState('推移を表示できる項目がありません','数値の記録が2回分以上あるとグラフになります。');
+  if(!trendItem||!opts.find(i=>i.id===trendItem))trendItem=opts[0].id;
+  let sel='<select id="trend-sel">';
+  let lastCat=null;
+  opts.forEach(i=>{
+    if(i.cat!==lastCat){if(lastCat)sel+='</optgroup>';sel+=`<optgroup label="${esc(i.cat)}">`;lastCat=i.cat;}
+    sel+=`<option value="${i.id}" ${i.id===trendItem?'selected':''}>${esc(i.label)}</option>`;
+  });
+  sel+='</optgroup></select>';
+  const it=ITEMS.find(i=>i.id===trendItem);
+  return `<div class="card pad">
+    <div class="chart-head"><label class="fld" style="flex:0 0 auto">項目${sel}</label>
+      <span class="hint">基準値 ${esc(it.ref||'—')}</span></div>
+    <canvas id="chart" height="320"></canvas>
+    <div class="legend"><span><i style="background:var(--teal)"></i>測定値</span>
+      <span><i style="background:var(--ok)"></i>基準範囲内</span>
+      <span style="color:var(--ink-soft)">帯＝基準範囲</span></div>
+  </div>`;
+}
+
+/* ----- DATA ----- */
+function viewData(){
+  const n=records.length;
+  const liffCount=records.filter(r=>!isReadOnly(r)).length;
+  const botCount=records.filter(isReadOnly).length;
+  const vals=records.reduce((s,r)=>s+Object.keys(r.values).length,0);
+  const showMigrate=(Backend.mode==='remote' && liffCount===0);
+  return `<div class="card pad">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:6px">
+      <div><div class="num" style="font-size:30px;font-weight:800;color:var(--teal-deep)">${n}</div><div class="hint">記録</div></div>
+      <div><div class="num" style="font-size:30px;font-weight:800;color:var(--teal-deep)">${vals}</div><div class="hint">入力済みの値</div></div>
+      <div><div class="num" style="font-size:30px;font-weight:800;color:var(--teal-deep)">${botCount}</div><div class="hint">LINEから記録</div></div>
+    </div>
+    <div class="hint">保存先：${Backend.mode==='remote'?'スプレッドシート（クラウド）':'この端末（プレビュー）'}${Backend.name?' ・ '+esc(Backend.name)+' さん':''}</div>
+    </div>
+    ${showMigrate?`<div class="sec-title"><h2>初回データ移行</h2><span class="ln"></span></div>
+      <button class="btn" id="migrate">取り込み済みの18回分をクラウドに登録</button>
+      <small class="note">最初の表のデータをスプレッドシートへ移します（1回だけ実行）。</small>`:''}
+    <div class="sec-title"><h2>書き出し</h2><span class="ln"></span></div>
+    <button class="btn soft" id="exp-csv">CSVで書き出し（Excelで開けます）</button>
+    <button class="btn ghost" id="reload">最新の状態に更新</button>
+    <div class="sec-title"><h2>記録の管理</h2><span class="ln"></span></div>
+    <div class="reclist">${sortedRecords().map(r=>`
+      <div class="recitem">
+        <div><div class="d">${esc(r.title||fmtDate(r.date))}</div><div class="f">${r.date?fmtDate(r.date):'日付未設定'}${r.facility?' ・ '+esc(r.facility):''}</div></div>
+        <span class="sp"></span><span class="pill">${Object.keys(r.values).length}項目</span>
+        ${isReadOnly(r)?'<span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>'
+          :`<button class="btn sm soft" data-edit="${r.id}">編集</button><button class="btn sm danger" data-del="${r.id}">削除</button>`}
+      </div>`).join('')||'<div class="hint">記録はまだありません。</div>'}</div>`;
+}
+
+function emptyState(t,s){return `<div class="card"><div class="empty"><div class="big">🩺</div><div style="font-weight:700;color:var(--ink);font-size:16px">${t}</div><div>${s}</div></div></div>`;}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- bind events ---------- */
+function bind(){
+  if(activeTab==='input'){
+    const upd=()=>{draft.date=$('#f-date').value;draft.title=$('#f-title').value;draft.facility=$('#f-fac').value;};
+    ['#f-date','#f-title','#f-fac'].forEach(s=>$(s).addEventListener('input',upd));
+    document.querySelectorAll('input.val').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        const id=inp.dataset.id;const v=inp.value.trim();
+        if(v==='')delete draft.values[id];else draft.values[id]=v;
+        const it=ITEMS.find(i=>i.id===id);const j=judge(it,v);const[sym,cls]=BADGE[j];
+        const b=document.querySelector(`[data-badge="${id}"]`);b.textContent=sym;b.className='badge '+cls;
+        updFill();
+      });
+    });
+    setupAvgCalc();
+    updFill();
+    $('#save').addEventListener('click',saveDraft);
+    if($('#cancel'))$('#cancel').addEventListener('click',()=>{editingId=null;draft=blankDraft();render();});
+  }
+  if(activeTab==='trend'){
+    $('#trend-sel').addEventListener('change',e=>{trendItem=e.target.value;drawChart();});
+    requestAnimationFrame(drawChart);
+    window.addEventListener('resize',drawChart,{once:true});
+  }
+  if(activeTab==='data'){
+    $('#exp-csv').addEventListener('click',exportCSV);
+    $('#reload').addEventListener('click',async()=>{toast('更新しています…');records=await Backend.load();render();});
+    if($('#migrate'))$('#migrate').addEventListener('click',async()=>{
+      if(!confirm('取り込み済みの18回分をクラウドに登録します。よろしいですか？'))return;
+      const b=$('#migrate');b.disabled=true;b.textContent='登録中…';
+      try{const r=await Backend.migrate(ORIGINAL_RECORDS);records=await Backend.load();toast((r&&r.saved||0)+'件を登録しました');render();}
+      catch(e){toast('登録できませんでした');b.disabled=false;b.textContent='取り込み済みの18回分をクラウドに登録';}
+    });
+    document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>startEdit(b.dataset.edit)));
+    document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',async()=>{
+      if(confirm('この記録を削除しますか？')){
+        try{await Backend.remove(b.dataset.del);records=records.filter(r=>r.id!==b.dataset.del);toast('削除しました');render();}
+        catch(e){toast('削除できませんでした');}
+      }
+    }));
+  }
+}
+function updFill(){const n=Object.keys(draft.values).filter(k=>draft.values[k]!=='').length;const el=$('#fillcount');if(el)el.textContent=n+' 項目に入力済み';}
+
+/* 平均血糖値（推定）= 28.7 × HbA1c − 46.7。HbA1cを入力すると、平均血糖値が空欄のとき自動で埋める。実測値を手入力すれば上書きできる。 */
+function estAvgGlucose(h){const n=parseFloat(String(h).replace(/[^\d.\-]/g,''));return isNaN(n)?null:Math.round(28.7*n-46.7);}
+function setupAvgCalc(){
+  const hb=document.querySelector('input.val[data-id="i26"]');
+  const avg=document.querySelector('input.val[data-id="i_avg"]');
+  if(!hb||!avg)return;
+  const setEst=()=>{const e=estAvgGlucose(hb.value);avg.placeholder=e!=null?('推定 '+e):'—';};
+  setEst();
+  hb.addEventListener('input',()=>{
+    setEst();
+    const e=estAvgGlucose(hb.value);
+    if(e!=null && avg.value.trim()===''){ // fill only when blank, so manual values are kept
+      avg.value=e; draft.values['i_avg']=String(e);
+      const it=ITEMS.find(i=>i.id==='i_avg');const j=judge(it,e);const[s,c]=BADGE[j];
+      const b=document.querySelector('[data-badge="i_avg"]');if(b){b.textContent=s;b.className='badge '+c;}
+      updFill();
+    }
+  });
+}
+
+async function saveDraft(){
+  const upd=()=>{draft.date=$('#f-date').value;draft.title=$('#f-title').value;draft.facility=$('#f-fac').value;};upd();
+  if(Object.keys(draft.values).length===0){toast('値が1つも入力されていません');return;}
+  const btn=$('#save'); if(btn){btn.disabled=true;btn.textContent='保存中…';}
+  try{
+    if(editingId){
+      const r=records.find(x=>x.id===editingId);
+      Object.assign(r,{title:draft.title,date:draft.date,facility:draft.facility,values:{...draft.values}});
+      await Backend.save(r);
+      toast('記録を更新しました');editingId=null;
+    }else{
+      const rec={id:'r'+Date.now(),title:draft.title,date:draft.date,facility:draft.facility,values:{...draft.values}};
+      records.push(rec);
+      await Backend.save(rec);
+      toast('記録を保存しました');
+    }
+    draft=blankDraft();activeTab='history';render();
+  }catch(e){
+    toast('保存できませんでした。通信状態を確認してください');
+    if(btn){btn.disabled=false;btn.textContent=editingId?'更新を保存':'この記録を保存';}
+  }
+}
+function startEdit(id){
+  const r=records.find(x=>x.id===id);if(!r)return;
+  editingId=id;draft={id,title:r.title,date:r.date,facility:r.facility,values:{...r.values}};
+  activeTab='input';render();window.scrollTo(0,0);
+}
+
+/* ---------- chart ---------- */
+function drawChart(){
+  const cv=$('#chart');if(!cv)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth, h=320;
+  cv.width=w*dpr;cv.height=h*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,w,h);
+  const it=ITEMS.find(i=>i.id===trendItem);
+  const pts=sortedRecords().map(r=>({d:r.date,label:r.title||r.date,raw:r.values[it.id]}))
+    .filter(p=>p.raw!==undefined&&p.raw!=='')
+    .map(p=>({...p,v:parseFloat(String(p.raw).replace(/[^\d.\-]/g,''))}))
+    .filter(p=>!isNaN(p.v));
+  if(pts.length<1)return;
+  const b=refBounds(it.ref)||{};
+  let vals=pts.map(p=>p.v);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(b.min!=null){lo=Math.min(lo,b.min);hi=Math.max(hi,b.min);}
+  if(b.max!=null){lo=Math.min(lo,b.max);hi=Math.max(hi,b.max);}
+  const pad=(hi-lo)*0.15||Math.abs(hi)*0.1||1;lo-=pad;hi+=pad;
+  const L=46,R=14,T=18,B=46;
+  const px=i=>L+(pts.length===1?(w-L-R)/2:(i*(w-L-R)/(pts.length-1)));
+  const py=v=>T+(h-T-B)*(1-(v-lo)/(hi-lo||1));
+  // reference band
+  if(b.min!=null||b.max!=null){
+    const yTop=py(b.max!=null?b.max:hi), yBot=py(b.min!=null?b.min:lo);
+    ctx.fillStyle='rgba(46,158,107,.10)';ctx.fillRect(L,yTop,w-L-R,yBot-yTop);
+    ctx.strokeStyle='rgba(46,158,107,.45)';ctx.setLineDash([5,4]);ctx.lineWidth=1;
+    if(b.max!=null){ctx.beginPath();ctx.moveTo(L,yTop);ctx.lineTo(w-R,yTop);ctx.stroke();}
+    if(b.min!=null){ctx.beginPath();ctx.moveTo(L,yBot);ctx.lineTo(w-R,yBot);ctx.stroke();}
+    ctx.setLineDash([]);
+  }
+  // axes
+  ctx.strokeStyle='#E4E8E3';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,h-B);ctx.lineTo(w-R,h-B);ctx.stroke();
+  ctx.fillStyle='#9AA6A2';ctx.font='11px ui-monospace,monospace';ctx.textAlign='right';
+  for(let k=0;k<=4;k++){const val=lo+(hi-lo)*k/4;const y=py(val);ctx.fillText(val.toFixed(Math.abs(val)<10?1:0),L-7,y+3);
+    ctx.strokeStyle='#F0F2EE';ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(w-R,y);ctx.stroke();}
+  // line
+  ctx.strokeStyle='#0E8C7F';ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.beginPath();
+  pts.forEach((p,i)=>{const x=px(i),y=py(p.v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+  // points + labels
+  pts.forEach((p,i)=>{
+    const x=px(i),y=py(p.v);const jg=judge(it,p.raw);
+    ctx.fillStyle=jg==='high'?'#D2553F':jg==='low'?'#3B7CC4':'#2E9E6B';
+    ctx.beginPath();ctx.arc(x,y,4.5,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,1.8,0,7);ctx.fill();
+    ctx.fillStyle='#1B2A28';ctx.font='bold 11px ui-monospace,monospace';ctx.textAlign='center';
+    ctx.fillText(p.v,x,y-10);
+    ctx.fillStyle='#9AA6A2';ctx.font='10px sans-serif';
+    const lbl=(p.d||'').slice(2).replace(/-/g,'/')||p.label;ctx.fillText(lbl,x,h-B+16);
+  });
+}
+
+/* ---------- export / import ---------- */
+function exportCSV(){
+  const recs=sortedRecords();
+  let rows=[];
+  rows.push(['区分','検査項目','基準値',...recs.map(r=>(r.title||'')+' '+(r.date||''))]);
+  ITEMS.forEach(i=>{
+    rows.push([i.cat,i.label,i.ref,...recs.map(r=>{const v=r.values[i.id];return v===undefined?'':v;})]);
+  });
+  const csv='\ufeff'+rows.map(r=>r.map(c=>{c=String(c==null?'':c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(',')).join('\r\n');
+  dl(new Blob([csv],{type:'text/csv'}),'健康管理記録.csv');toast('CSVを書き出しました');
+}
+function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+
+/* ---------- nav ---------- */
+document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{
+  activeTab=b.dataset.tab;render();
+}));
+
+/* ---------- startup ---------- */
+(async function(){
+  const ov=document.getElementById('overlay'), msg=document.getElementById('overlay-msg');
+  try{
+    const ok=await Backend.init();
+    if(!ok)return;                       // LIFFログインへリダイレクト中
+    if(msg)msg.textContent='記録を読み込んでいます…';
+    records=await Backend.load();
+  }catch(e){
+    console.warn(e);
+    try{const raw=localStorage.getItem(LS_CACHE);records=raw?JSON.parse(raw):[];}catch(_){records=[];}
+    toast('オフライン表示中（最後に取得した内容）');
+  }
+  if(ov)ov.style.display='none';
+  render();
+})();
+</script>
+</body>
+</html>
