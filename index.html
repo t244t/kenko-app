@@ -119,6 +119,13 @@
   @media(max-width:520px){.data-actions{grid-template-columns:1fr}}
   .fileinput{display:none}
   small.note{display:block;color:var(--ink-soft);margin-top:6px;font-size:11.5px;line-height:1.5}
+  .mback{position:fixed;inset:0;background:rgba(27,42,40,.42);z-index:60;display:flex;align-items:center;justify-content:center;padding:18px}
+  .mbox{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:440px;max-height:85vh;overflow:auto;padding:20px}
+  .mbox h3{margin:0 0 6px;font-size:16px;color:var(--teal-deep)}
+  .mbox .cand{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+  .mbox .chg{font-size:13px;margin:6px 0 0;padding-left:1.2em}
+  .mbox .chg li{margin:2px 0}
+  .mbox .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 </style>
 </head>
 <body>
@@ -395,8 +402,8 @@ function viewData(){
       <div class="recitem">
         <div><div class="d">${esc(r.title||fmtDate(r.date))}</div><div class="f">${r.date?fmtDate(r.date):'日付未設定'}${r.facility?' ・ '+esc(r.facility):''}</div></div>
         <span class="sp"></span><span class="pill">${Object.keys(r.values).length}項目</span>
-        ${isReadOnly(r)?'<span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>'
-          :`<button class="btn sm soft" data-edit="${r.id}">編集</button><button class="btn sm danger" data-del="${r.id}">削除</button>`}
+        ${isReadOnly(r)?'<span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}
+        <button class="btn sm soft" data-edit="${r.id}">編集</button><button class="btn sm danger" data-del="${r.id}">削除</button>
       </div>`).join('')||'<div class="hint">記録はまだありません。</div>'}</div>`;
 }
 
@@ -470,9 +477,27 @@ function setupAvgCalc(){
 async function saveDraft(){
   const upd=()=>{draft.date=$('#f-date').value;draft.title=$('#f-title').value;draft.facility=$('#f-fac').value;};upd();
   if(Object.keys(draft.values).length===0){toast('値が1つも入力されていません');return;}
+  // 新規保存で、同じ日付の記録がすでにある場合は「追加する／別の記録にする」を確認
+  let mergeTarget=null;
+  if(!editingId && draft.date){
+    const same=records.filter(r=>r.date===draft.date);
+    if(same.length){
+      const ans=await askMerge(same,draft);
+      if(ans==='cancel')return;
+      if(ans!=='new')mergeTarget=records.find(r=>r.id===ans);
+    }
+  }
   const btn=$('#save'); if(btn){btn.disabled=true;btn.textContent='保存中…';}
   try{
-    if(editingId){
+    if(mergeTarget){
+      const r=mergeTarget;
+      r.values=Object.assign({},r.values,draft.values);          // 入力した項目だけ追加・更新（既存の値は残す）
+      if(!r.title && draft.title)r.title=draft.title;
+      if(draft.facility && r.facility!==draft.facility)
+        r.facility=r.facility?(r.facility.indexOf(draft.facility)>=0?r.facility:r.facility+' / '+draft.facility):draft.facility;
+      await Backend.save(r);
+      toast('同じ日の記録に追加しました');
+    }else if(editingId){
       const r=records.find(x=>x.id===editingId);
       Object.assign(r,{title:draft.title,date:draft.date,facility:draft.facility,values:{...draft.values}});
       await Backend.save(r);
@@ -488,6 +513,39 @@ async function saveDraft(){
     toast('保存できませんでした。通信状態を確認してください');
     if(btn){btn.disabled=false;btn.textContent=editingId?'更新を保存':'この記録を保存';}
   }
+}
+function askMerge(cands,d){
+  return new Promise(resolve=>{
+    const lab=id=>{const it=ITEMS.find(i=>i.id===id);return it?it.label:id;};
+    const html=cands.map(r=>{
+      const add=[],chg=[];
+      Object.keys(d.values).forEach(id=>{
+        const ov=r.values[id],nv=d.values[id];
+        if(ov==null||ov==='')add.push(id);
+        else if(String(ov)!==String(nv))chg.push(`<li>${esc(lab(id))}：${esc(ov)} → <b>${esc(nv)}</b></li>`);
+      });
+      return `<div class="cand">
+        <div style="font-weight:700">${esc(r.title||fmtDate(r.date))}${isReadOnly(r)?' <span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}</div>
+        <div class="hint">${fmtDate(r.date)}${r.facility?' ・ '+esc(r.facility):''} ・ ${Object.keys(r.values).length}項目</div>
+        <div class="hint" style="margin-top:6px">追加される項目：${add.length}件${chg.length?` ／ 値が変わる項目：${chg.length}件`:''}</div>
+        ${chg.length?`<ul class="chg">${chg.join('')}</ul>`:''}
+        <div class="row"><button class="btn sm" data-m="${esc(r.id)}">この記録に追加する</button></div>
+      </div>`;}).join('');
+    const back=document.createElement('div');back.className='mback';
+    back.innerHTML=`<div class="mbox" role="dialog" aria-modal="true">
+      <h3>${fmtDate(d.date)} の記録がすでにあります</h3>
+      <div class="hint">同じ日の診察・採血の結果なら、既存の記録に追加するとまとまって見やすくなります。入力した項目だけが追加・更新され、ほかの値はそのまま残ります。</div>
+      ${html}
+      <div class="row"><button class="btn sm ghost" data-m="__new">別の記録として保存</button><button class="btn sm ghost" data-m="__cancel">やめる</button></div>
+    </div>`;
+    document.body.appendChild(back);
+    const done=v=>{back.remove();resolve(v);};
+    back.addEventListener('click',e=>{
+      const b=e.target.closest('[data-m]');
+      if(b){const v=b.dataset.m;done(v==='__new'?'new':v==='__cancel'?'cancel':v);}
+      else if(e.target===back)done('cancel');
+    });
+  });
 }
 function startEdit(id){
   const r=records.find(x=>x.id===id);if(!r)return;
