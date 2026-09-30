@@ -199,7 +199,7 @@ const Backend={
   async load(){
     if(this.mode==='remote'){
       const j=await this.gasGet({action:'load',userId:this.userId});
-      const recs=(j&&j.records)?j.records:[];
+      const recs=((j&&j.records)?j.records:[]).map(r=>Object.assign(r,{date:normDate(r.date)}));
       try{localStorage.setItem(LS_CACHE,JSON.stringify(recs));}catch(e){}
       return recs;
     }
@@ -227,7 +227,15 @@ const Backend={
   },
   cache(){ try{localStorage.setItem(LS_CACHE,JSON.stringify(records));}catch(e){} }
 };
-function isReadOnly(r){ return r && r.source==='bot'; }
+// LINEボット由来の記録か（編集済みで詳細記録に移ったものも含む）
+function isFromLine(r){ return !!r && (r.source==='bot' || r.origin==='bot'); }
+// 日付を yyyy-MM-dd にそろえる（2026/09/25 や ISO形式にも対応）
+function normDate(v){
+  const s=String(v==null?'':v).trim(); if(!s)return '';
+  if(/T\d{2}:/.test(s)){const d=new Date(s);if(!isNaN(d)){const j=new Date(d.getTime()+9*3600e3);return j.toISOString().slice(0,10);}}
+  const m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:s;
+}
 
 /* ---------- judgment ---------- */
 function refBounds(ref){
@@ -379,8 +387,8 @@ function viewTrend(){
 /* ----- DATA ----- */
 function viewData(){
   const n=records.length;
-  const liffCount=records.filter(r=>!isReadOnly(r)).length;
-  const botCount=records.filter(isReadOnly).length;
+  const liffCount=records.filter(r=>r.source!=='bot').length;
+  const botCount=records.filter(isFromLine).length;
   const vals=records.reduce((s,r)=>s+Object.keys(r.values).length,0);
   const showMigrate=(Backend.mode==='remote' && liffCount===0);
   return `<div class="card pad">
@@ -402,7 +410,7 @@ function viewData(){
       <div class="recitem">
         <div><div class="d">${esc(r.title||fmtDate(r.date))}</div><div class="f">${r.date?fmtDate(r.date):'日付未設定'}${r.facility?' ・ '+esc(r.facility):''}</div></div>
         <span class="sp"></span><span class="pill">${Object.keys(r.values).length}項目</span>
-        ${isReadOnly(r)?'<span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}
+        ${isFromLine(r)?'<span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}
         <button class="btn sm soft" data-edit="${r.id}">編集</button><button class="btn sm danger" data-del="${r.id}">削除</button>
       </div>`).join('')||'<div class="hint">記録はまだありません。</div>'}</div>`;
 }
@@ -496,11 +504,13 @@ async function saveDraft(){
       if(draft.facility && r.facility!==draft.facility)
         r.facility=r.facility?(r.facility.indexOf(draft.facility)>=0?r.facility:r.facility+' / '+draft.facility):draft.facility;
       await Backend.save(r);
+      if(r.source==='bot'){r.source='liff';r.origin='bot';}
       toast('同じ日の記録に追加しました');
     }else if(editingId){
       const r=records.find(x=>x.id===editingId);
       Object.assign(r,{title:draft.title,date:draft.date,facility:draft.facility,values:{...draft.values}});
       await Backend.save(r);
+      if(r.source==='bot'){r.source='liff';r.origin='bot';}
       toast('記録を更新しました');editingId=null;
     }else{
       const rec={id:'r'+Date.now(),title:draft.title,date:draft.date,facility:draft.facility,values:{...draft.values}};
@@ -525,7 +535,7 @@ function askMerge(cands,d){
         else if(String(ov)!==String(nv))chg.push(`<li>${esc(lab(id))}：${esc(ov)} → <b>${esc(nv)}</b></li>`);
       });
       return `<div class="cand">
-        <div style="font-weight:700">${esc(r.title||fmtDate(r.date))}${isReadOnly(r)?' <span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}</div>
+        <div style="font-weight:700">${esc(r.title||fmtDate(r.date))}${isFromLine(r)?' <span class="pill" style="background:var(--low-wash);color:var(--low)">LINE</span>':''}</div>
         <div class="hint">${fmtDate(r.date)}${r.facility?' ・ '+esc(r.facility):''} ・ ${Object.keys(r.values).length}項目</div>
         <div class="hint" style="margin-top:6px">追加される項目：${add.length}件${chg.length?` ／ 値が変わる項目：${chg.length}件`:''}</div>
         ${chg.length?`<ul class="chg">${chg.join('')}</ul>`:''}
